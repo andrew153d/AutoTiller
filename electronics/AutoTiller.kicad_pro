@@ -185,7 +185,7 @@
         },
         {
           "diameter": 0.45,
-          "drill": 0.15
+          "drill": 0.3
         }
       ],
       "zones_allow_external_fillets": true
@@ -451,7 +451,7 @@
       "idf": "",
       "netlist": "",
       "specctra_dsn": "",
-      "step": "",
+      "step": "AutoTiller.step",
       "vrml": ""
     },
     "page_layout_descr_file": ""
