@@ -17,4 +17,4 @@ The PCB layout file can also be found in the `media` directory:
 
 The view of the board from the cockpit:
 
-![PCB View](media/pcb-view.png) 
+![PCB View](media/pcb-view.jpg) 
