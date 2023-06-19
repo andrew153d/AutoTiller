@@ -124,6 +124,11 @@ uint8_t MMC5603NJ::readProductId(void) {
 
 void MMC5603NJ::softwareReset(void) {
     writeByte(MMC5603NJ_ADDR_INTCTRL1, 0x80);
+    delay(200);
+    writeByte(MMC5603NJ_ADDR_INTCTRL0, 0b00010000);
+    delay(200);
+    writeByte(MMC5603NJ_ADDR_INTCTRL0, 0b00001000);
+    delay(200);
 }
 
 // Private Function

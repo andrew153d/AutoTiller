@@ -10,7 +10,7 @@
 #include <iostream>
 #include <cstdint>
 
-#define PORT 61912
+#define SEND_PORT 8888
 
 class UDPHandler
 {
@@ -24,15 +24,24 @@ public:
     bool isInitialized;
 
     UDPHandler(int i);
-    void init(int *_time);
-    void sendUDPevery(const char *data, int msec);
-    void sendUDP(const char *data);
-    void sendUDP(int *data);
+    void begin(int useless);
 
+
+    void sendUDPevery(const char *data, int msec);
+
+    void sendUDP(const char *data);
+    void sendUDP(int num);
+    void sendUDP(float num);
+    void sendUDP(double num);
+    void sendUDP(bool b);
+    
     void print(const char str[]);
     void print(std::string str);
+    void print(float num);
+
     void println(const char str[]);
-    void println(String str);
+    void println(String str = "");
+    void println(float num);
 };
 
 extern UDPHandler UDP;

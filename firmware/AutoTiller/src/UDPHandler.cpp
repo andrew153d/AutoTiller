@@ -13,12 +13,12 @@ float bufToFloat(uint8_t *buf, int len)
   return result;
 }
 
-void UDPHandler::init(int *_time)
+void UDPHandler::begin(int useless)
 {
-  time = _time;
+
   lastMsgTime = 0;
 
-  if (udp.listen(1234))
+  if (udp.listen(8887))
   {
     udp.onPacket([&](AsyncUDPPacket packet)
                  {
@@ -70,13 +70,14 @@ void UDPHandler::init(int *_time)
 
 void UDPHandler::sendUDPevery(const char *data, int msec)
 {
-  if ((*time - lastMsgTime) < msec)
+  static long time = millis();
+  if ((time - lastMsgTime) < msec)
   {
     return;
   }
-  lastMsgTime = *time;
+  lastMsgTime = time;
   udp.broadcastTo(data, senderPort);
-  //udp.broadcast(data);
+  // udp.broadcast(data);
 }
 
 void UDPHandler::sendUDP(const char *data)
@@ -84,11 +85,31 @@ void UDPHandler::sendUDP(const char *data)
   udp.broadcastTo(data, senderPort);
 }
 
-void UDPHandler::sendUDP(int *data)
+void UDPHandler::sendUDP(int num)
 {
   char buf[10];
-  int out = *data;
-  sprintf(buf, "%d", (int)*data);
+  sprintf(buf, "%d", num);
+  udp.broadcastTo(buf, senderPort);
+}
+
+void UDPHandler::sendUDP(float num)
+{
+  char buf[10];
+  sprintf(buf, "%d", num);
+  udp.broadcastTo(buf, senderPort);
+}
+
+void UDPHandler::sendUDP(double num)
+{
+  char buf[10];
+  sprintf(buf, "%d", num);
+  udp.broadcastTo(buf, senderPort);
+}
+
+void UDPHandler::sendUDP(bool b)
+{
+  char buf[10];
+  sprintf(buf, "%d", b);
   udp.broadcastTo(buf, senderPort);
 }
 
@@ -96,7 +117,7 @@ UDPHandler::UDPHandler(int i)
 {
   lastMsgTime = 0;
   isInitialized = true;
-  senderPort = PORT;
+  senderPort = SEND_PORT;
 }
 
 void UDPHandler::print(const char str[])
@@ -116,6 +137,13 @@ void UDPHandler::print(std::string str)
 void UDPHandler::println(String str)
 {
   sendUDP(str.c_str());
+}
+
+void UDPHandler::print(float num){
+  sendUDP(num);
+}
+void UDPHandler::println(float num){
+  sendUDP(num);
 }
 
 UDPHandler UDP(1);

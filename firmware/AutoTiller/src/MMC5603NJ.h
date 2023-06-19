@@ -189,7 +189,7 @@ class MMC5603NJ {
     void writeControl1(MMC5603NJ_INTCTRL1_REG ctrl);
     MMC5603NJ_INTCTRL2_REG readControl2(void);
     void writeControl2(MMC5603NJ_INTCTRL2_REG ctrl);
-
+    
     uint8_t readProductId(void);
 
     void softwareReset();
