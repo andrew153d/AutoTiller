@@ -9,6 +9,7 @@
 #include "LIS2MDL.h"
 #include "pid.h"
 #include "filter.h"
+#include "utils.h"
 
 // PIN definitions
 #define IMU_ADDR_BIT7_PIN 22
@@ -26,6 +27,11 @@
 #define MOTOR_VREF 5
 #define COMPASSDATAREADY 25
 
+#define AVG_LENGTH 20
+float average_buf[AVG_LENGTH];
+int8_t avg_index = 0;
+float average(float input);
+
 void setMotor(int vref);
 void testMotor();
 void updateButtons();
@@ -37,7 +43,7 @@ PIDController torquePID(0, 0, 0, 10000, 255);
 float torquePID_P = 0;
 float torquePID_I = 0;
 float torquePID_D = 0;
-
+long printTimer = 0;
 struct buttons
 {
   bool Set;
@@ -59,12 +65,11 @@ float targetHeading = 0;
 #define DEBUG Serial
 
 #ifdef DO_OTA
-const char *ssid
-const char *password
+const char *ssid =      // Network Name
+const char *password =  // Password
 #endif
 
 BQ25792 charger(0, 0);
-filter smooth(20);
 int nowTime = 0;
 
 long lastOffTime;
@@ -99,7 +104,7 @@ void setup()
   // pinMode(MOTOR_VREF, OUTPUT);
   pinMode(COMPASSDATAREADY, INPUT);
 
-  testMotor();
+  // testMotor();
   digitalWrite(STAT_LED, LOW);
 
 #ifdef DO_OTA
@@ -150,12 +155,15 @@ void setup()
 
   charger.reset();
   delay(100);
+
   DEBUG.print("Battery Voltage: ");
   DEBUG.println(charger.getVBAT());
+
   delay(100);
+
   DEBUG.print("Maximum Voltage: ");
   DEBUG.println(charger.getChargeVoltageLimit());
-
+  
   if (compass.begin())
   {
     Serial.println("Compass Found");
@@ -164,9 +172,11 @@ void setup()
   {
     Serial.println("Failed to find sensor");
     delay(1000000);
-  }
-  compass.setODR(ODR::ODR_100_Hz);
+  } 
+  //compass.setMode(ModeSetting::ContinuousMode);
+  //compass.setODR(ODR::ODR_10_Hz);
   AutopilotMode = AUTOPILOT_OFF;
+
   torquePID.P = 2;
   torquePID.limit = 255;
 }
@@ -215,7 +225,7 @@ void loop()
     else
     {
       deadspace++;
-      DEBUG.print("New delay: ");
+      DEBUG.print("New deadspace: ");
       DEBUG.println(deadspace);
     }
   }
@@ -245,7 +255,9 @@ void loop()
     else
     {
       deadspace--;
-      DEBUG.print("New delay: ");
+      if (deadspace < 0)
+        deadspace = 0;
+      DEBUG.print("New deadspace: ");
       DEBUG.println(deadspace);
     }
   }
@@ -267,24 +279,34 @@ void loop()
 
   if (AutopilotMode == AUTOPILOT_ON)
   {
-    float heading = compass.getHeading();
-    smooth.input(heading);
-    float smoothHeading = smooth.getValue();
-    float Error = getCompassError(targetHeading, smoothHeading);
+    float heading = average(compass.getHeading());
+    float Error = getCompassError(targetHeading, heading);
     float motorVoltage = torquePID(Error);
     setMotor((int)motorVoltage);
-    
-    Serial.print("Heading: ");
-    Serial.print(heading);
-    Serial.print(" Heading: ");
-    Serial.print(smoothHeading);
-    Serial.print(" error: ");
-    Serial.print(Error);
-    Serial.print(" Voltage: ");
-    Serial.println(motorVoltage);
+
+    // DEBUG.print("Heading: ");
+    // DEBUG.print(heading);
+
+    if (everyXms(&printTimer, 100))
+    {
+      Serial.print(heading);
+      Serial.print("\t");
+      Serial.print(Error);
+      Serial.print("\t");
+      Serial.println(motorVoltage);
+    }
   }
   else
   {
+   // if (everyXms(&printTimer, 100))
+    //{
+      //Serial.print(0);
+      //Serial.print('\t');
+      //Serial.print(360);
+      //Serial.print('\t');
+      //Serial.println(average(compass.getHeading()));
+    
+    //}
     setMotor(0);
   }
 }
@@ -350,6 +372,26 @@ float getCompassError(float targetHeading, float currentHeading)
   {
     error += 360.0;
   }
-  
-  return ((abs(error)<deadspace)?0:error);
+
+  return ((abs(error) < deadspace) ? 0 : error);
+}
+
+float average(float input){
+  avg_index++;
+  avg_index = avg_index%AVG_LENGTH;
+  average_buf[avg_index] = input;
+
+  float min = 360;
+  float max = 0;
+  float sum = 0;
+  for(float val: average_buf){
+    if(val<min)
+      min = val;
+    if(val>max)
+      max=val;
+    sum+=val;
+  }
+
+ //Serial.printf("Min: %f  Max: %f\n", min, max);
+  return sum/AVG_LENGTH;
 }
