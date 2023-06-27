@@ -43,12 +43,16 @@ void motorDriver::handleInturrupt()
 {
   if (Direction == RIGHT)
   {
-    shaftAngle = shaftAngle - (1 / 1080) / 360;
+    ticks++;
   }
   else
   {
-    shaftAngle = shaftAngle + (1 / 1080) / 360;
+    ticks--;
   }
+}
+
+double motorDriver::getShaftAngle(){
+  return (double)(ticks)*TICKS_TO_DEGREES;
 }
 
 void motorDriver::setAngle(float angle)

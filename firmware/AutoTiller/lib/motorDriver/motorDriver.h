@@ -8,6 +8,7 @@
 #define PULSES_PER_REV 540;
 #define RADIUS 0.5
 #define LEDC_CHANNEL 13
+#define TICKS_TO_DEGREES 360/540
 
 class motorDriver
 {
@@ -26,6 +27,7 @@ public:
     void begin();
     void setMotor(int vref);
     void handleInturrupt();
+    double getShaftAngle();
     void setAngle(float angle);
     float getAngle();
     void task();

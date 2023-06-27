@@ -57,8 +57,7 @@ float getCompassError(float targetHeading, float currentHeading);
 
 void IRAM_ATTR ISR()
 {
-  dummy++;
-  // motor.handleInturrupt();
+  motor.handleInturrupt();
 }
 
 void setup()
@@ -119,20 +118,14 @@ void loop()
   if (buttonPressed.Set)
   {
     motor.setMotor(100);
-    //ledcWrite(channel, 100);
-    //digitalWrite(MOTOR_DIR_1, HIGH);
-    ///digitalWrite(MOTOR_DIR_2, LOW);
   }
   else
   {
     motor.setMotor(0);
-    //ledcWrite(channel, 0);
-    //digitalWrite(MOTOR_DIR_1, LOW);
-    //digitalWrite(MOTOR_DIR_2, LOW);
   }
   if (everyXms(&printTimer, 100))
   {
-    Serial.println(dummy);
+    Serial.println(motor.getShaftAngle());
   }
 }
 
