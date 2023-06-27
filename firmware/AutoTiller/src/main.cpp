@@ -9,13 +9,11 @@
 #include "utils.h"
 #include "motorDriver.h"
 
-//running average filter
+// running average filter
 #define AVG_LENGTH 20
 float average_buf[AVG_LENGTH];
 int8_t avg_index = 0;
 float average(float input);
-
-
 
 float deadspace = 10;
 PIDController torquePID(1, 0, 0, 10000, 255);
@@ -30,7 +28,7 @@ typedef struct
   bool p1;
   bool m15;
   bool p15;
-}inputButtons;
+} inputButtons;
 inputButtons buttonPressed, lastButtonPressed;
 
 enum Mode
@@ -39,15 +37,16 @@ enum Mode
   AUTOPILOT_ON
 } AutopilotMode;
 
-//global variables
+// global variables
 float targetHeading = 0;
 int nowTime;
 int dummy = 0;
+uint8_t channel = 13;
 
-//Connected Devices
+// Connected Devices
 BQ25792 charger(0, 0);
-//motorDriver motor;
 LIS2MDL compass;
+// motorDriver motor;
 
 void setMotor(int vref);
 void testMotor();
@@ -58,16 +57,17 @@ float getCompassError(float targetHeading, float currentHeading);
 
 void IRAM_ATTR ISR()
 {
-  //motor.handleInturrupt();
+  dummy++;
+  // motor.handleInturrupt();
 }
 
 void setup()
 {
   DEBUG.begin(115200);
-  
+
   Wire.begin(SDA_PIN, SCL_PIN);
 
-  //set pinModes
+  // set pinModes
   pinMode(STAT_LED, OUTPUT);
   pinMode(FUNCTION, INPUT);
   pinMode(SET, INPUT);
@@ -80,12 +80,11 @@ void setup()
   pinMode(ENC_A, INPUT);
   pinMode(ENC_B, INPUT);
   pinMode(COMPASSDATAREADY, INPUT);
-  pinMode(9, INPUT_PULLUP);
 
-  motor.begin();
+  // motor.begin();
 
   charger.reset();
-  delay(500); //give the charger time to reboot
+  delay(500); // give the charger time to reboot
 
   DEBUG.print("Battery Voltage: ");
   DEBUG.println(charger.getVBAT());
@@ -99,26 +98,43 @@ void setup()
   else
   {
     Serial.println("Failed to find sensor");
-    while(1){};
+    while (1)
+    {
+    };
   }
 
   attachInterrupt(ENC_A, ISR, FALLING);
-  
+
+  channel = 13;
+  Serial.println(ledcSetup(channel, 1000, 8) == ESP_OK);
+  ledcAttachPin(MOTOR_VREF, channel);
 }
 
 void loop()
 {
   nowTime = millis();
-  
-  updateButtons(); //update the state of the buttons
-  
-  if (everyXms(&printTimer, 10))
+
+  updateButtons(); // update the state of the buttons
+  if (buttonPressed.Set)
   {
-    Serial.printf("Heading: %f  targetAngle: %d\n", compass.getHeading(), motor.shaftAngle);
+    ledcWrite(channel, 100);
+    digitalWrite(MOTOR_DIR_1, HIGH);
+    digitalWrite(MOTOR_DIR_2, LOW);
+  }
+  else
+  {
+    ledcWrite(channel, 0);
+    digitalWrite(MOTOR_DIR_1, LOW);
+    digitalWrite(MOTOR_DIR_2, LOW);
+  }
+  if (everyXms(&printTimer, 100))
+  {
+    Serial.println(dummy);
   }
 }
 
-void task(){
+void task()
+{
 
   if (buttonPressed.Set && !lastButtonPressed.Set)
   {
@@ -207,19 +223,18 @@ void task(){
   }
 
   if (AutopilotMode == AUTOPILOT_ON)
-  { 
+  {
     float tillerHeading = average(compass.getHeading());
-    float tillerAngleToHull = motor.getAngle();
+    // float tillerAngleToHull = motor.getAngle();
 
     float Error = getCompassError(targetHeading, tillerHeading);
     float motorAngle = anglePID(Error);
-    motor.setAngle(motorAngle);
-    motor.setMotor(50);
-  
+    // motor.setAngle(motorAngle);
+    // motor.setMotor(50);
   }
   else
   {
-    motor.setMotor(0);
+    // motor.setMotor(0);
   }
 }
 
@@ -251,23 +266,25 @@ float getCompassError(float targetHeading, float currentHeading)
   return ((abs(error) < deadspace) ? 0 : error);
 }
 
-float average(float input){
-  
+float average(float input)
+{
+
   avg_index++;
-  avg_index = avg_index%AVG_LENGTH;
+  avg_index = avg_index % AVG_LENGTH;
   average_buf[avg_index] = input;
 
   float min = 360;
   float max = 0;
   float sum = 0;
-  for(float val: average_buf){
-    if(val<min)
+  for (float val : average_buf)
+  {
+    if (val < min)
       min = val;
-    if(val>max)
-      max=val;
-    sum+=val;
+    if (val > max)
+      max = val;
+    sum += val;
   }
 
- //Serial.printf("Min: %f  Max: %f\n", min, max);
-  return sum/AVG_LENGTH;
+  // Serial.printf("Min: %f  Max: %f\n", min, max);
+  return sum / AVG_LENGTH;
 }
