@@ -2,14 +2,17 @@
 
 void motorDriver::begin()
 {
+  shaftAngle = 0;
+  Direction = RIGHT;
+  // channel = 13;
+  // Serial.println(ledcSetup(channel, 4000, 8) == ESP_OK);
+  // ledcAttachPin(MOTOR_VREF, channel);
+  ledcSetup(LEDC_CHANNEL, 4000, 8);
   ledcAttachPin(MOTOR_VREF, LEDC_CHANNEL);
-  ledcSetup(LEDC_CHANNEL, 1000, 8);
 }
 
 motorDriver::motorDriver()
 {
-  shaftAngle = 0;
-  Direction = RIGHT;
 }
 
 void motorDriver::setMotor(int vref)

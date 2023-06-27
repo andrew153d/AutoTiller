@@ -46,7 +46,7 @@ uint8_t channel = 13;
 // Connected Devices
 BQ25792 charger(0, 0);
 LIS2MDL compass;
-// motorDriver motor;
+motorDriver motor;
 
 void setMotor(int vref);
 void testMotor();
@@ -81,11 +81,10 @@ void setup()
   pinMode(ENC_B, INPUT);
   pinMode(COMPASSDATAREADY, INPUT);
 
-  // motor.begin();
+ 
 
   charger.reset();
   delay(500); // give the charger time to reboot
-
   DEBUG.print("Battery Voltage: ");
   DEBUG.println(charger.getVBAT());
   DEBUG.print("Maximum Voltage: ");
@@ -105,9 +104,11 @@ void setup()
 
   attachInterrupt(ENC_A, ISR, FALLING);
 
-  channel = 13;
-  Serial.println(ledcSetup(channel, 1000, 8) == ESP_OK);
-  ledcAttachPin(MOTOR_VREF, channel);
+  motor.begin();
+
+  //channel = 13;
+  //Serial.println(ledcSetup(channel, 4000, 8) == ESP_OK);
+ // ledcAttachPin(MOTOR_VREF, channel);
 }
 
 void loop()
@@ -117,15 +118,17 @@ void loop()
   updateButtons(); // update the state of the buttons
   if (buttonPressed.Set)
   {
-    ledcWrite(channel, 100);
-    digitalWrite(MOTOR_DIR_1, HIGH);
-    digitalWrite(MOTOR_DIR_2, LOW);
+    motor.setMotor(100);
+    //ledcWrite(channel, 100);
+    //digitalWrite(MOTOR_DIR_1, HIGH);
+    ///digitalWrite(MOTOR_DIR_2, LOW);
   }
   else
   {
-    ledcWrite(channel, 0);
-    digitalWrite(MOTOR_DIR_1, LOW);
-    digitalWrite(MOTOR_DIR_2, LOW);
+    motor.setMotor(0);
+    //ledcWrite(channel, 0);
+    //digitalWrite(MOTOR_DIR_1, LOW);
+    //digitalWrite(MOTOR_DIR_2, LOW);
   }
   if (everyXms(&printTimer, 100))
   {

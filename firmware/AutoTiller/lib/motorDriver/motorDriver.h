@@ -5,9 +5,9 @@
 #include "../../include/defines.h"
 #include "pid.h"
 
-#define PULSES_PER_REV 1080;
+#define PULSES_PER_REV 540;
 #define RADIUS 0.5
-#define LEDC_CHANNEL 6
+#define LEDC_CHANNEL 13
 
 class motorDriver
 {
