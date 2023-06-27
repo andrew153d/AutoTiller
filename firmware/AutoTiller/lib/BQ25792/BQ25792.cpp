@@ -16,6 +16,24 @@ void BQ25792::begin()
     attachInterrupt(BCIN_Pin, chargerInturruptCallback, CHANGE);
 }
 
+bool BQ25792::flashChargeLevel(uint16_t pinToFlash, int totalDuration, uint16_t cycles){
+    float vBat = getVBAT();
+    float min = getVSYSMIN();
+    float max = getChargeVoltageLimit();
+    Serial.printf("Vbat: %.1f   Min: %.1f   Max: %.1f\n", vBat, min, max);
+    float onTime = map(vBat*100, min*100, max*100, 0, totalDuration);
+    float offTime = totalDuration-onTime;
+    Serial.printf("ON: %.1f  OFF:%.1f\n", onTime, offTime);
+    for(int i = 0; i<cycles; i++){
+        digitalWrite(pinToFlash, HIGH);
+        delay(onTime);
+        digitalWrite(pinToFlash, LOW);
+        delay(offTime);
+    }
+
+    return true;
+}
+
 float BQ25792::getVSYSMIN()
 {
     float val = ((readByte(REG00_Minimal_System_Voltage) & 0x3F) * VSYS_MIN_STEP_SIZE) + VSYS_MIN_FIXED_OFFSET;

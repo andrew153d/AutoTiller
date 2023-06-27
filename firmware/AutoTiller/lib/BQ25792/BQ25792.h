@@ -153,8 +153,11 @@ private:
 public:
     BQ25792(int _BCIN, int _QON);
 
+    //wrapper functions
     void begin();
-    
+    bool flashChargeLevel(uint16_t pinToFlash, int totalDuration = 500, uint16_t cycles = 4);
+
+    //Register Access Functions
     float getVSYSMIN();
     void setVSYSMIN(uint8_t vsys);
 
