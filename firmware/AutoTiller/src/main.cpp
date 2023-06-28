@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include "defines.h"
-#include "UDPHandler.h"
 #include "Wire.h"
 #include "BQ25792.h"
 #include "LIS2MDL.h"
@@ -16,7 +15,6 @@ int8_t avg_index = 0;
 float average(float input);
 
 float deadspace = 10;
-PIDController torquePID(1, 0, 0, 10000, 255);
 PIDController anglePID(1, 0, 0, 100, 20);
 
 long printTimer = 0;
@@ -46,7 +44,7 @@ uint8_t channel = 13;
 // Connected Devices
 BQ25792 charger(0, 0);
 LIS2MDL compass;
-motorDriver motor;
+motorManager motor;
 
 void setMotor(int vref);
 void testMotor();
@@ -80,14 +78,10 @@ void setup()
   pinMode(ENC_B, INPUT);
   pinMode(COMPASSDATAREADY, INPUT);
 
- 
-
+  // start Charger
   charger.reset();
   delay(500); // give the charger time to reboot
-  DEBUG.print("Battery Voltage: ");
-  DEBUG.println(charger.getVBAT());
-  DEBUG.print("Maximum Voltage: ");
-  DEBUG.println(charger.getChargeVoltageLimit());
+  charger.flashChargeLevel(STAT_LED);
 
   if (compass.begin())
   {
@@ -105,9 +99,6 @@ void setup()
 
   motor.begin();
 
-  //channel = 13;
-  //Serial.println(ledcSetup(channel, 4000, 8) == ESP_OK);
- // ledcAttachPin(MOTOR_VREF, channel);
 }
 
 void loop()
@@ -115,18 +106,9 @@ void loop()
   nowTime = millis();
 
   updateButtons(); // update the state of the buttons
-  if (buttonPressed.Set)
-  {
-    motor.setMotor(100);
-  }
-  else
-  {
-    motor.setMotor(0);
-  }
-  if (everyXms(&printTimer, 100))
-  {
-    Serial.println(motor.getShaftAngle());
-  }
+  task();
+
+  
 }
 
 void task()
@@ -144,7 +126,12 @@ void task()
       else if (AutopilotMode == AUTOPILOT_OFF)
       {
         AutopilotMode = AUTOPILOT_ON;
-        targetHeading = compass.getHeading();
+        for (int i = 0; i < AVG_LENGTH; i++)
+        {
+          targetHeading = average(compass.getHeading());
+        }
+        targetHeading = average(compass.getHeading());
+        Serial.printf("Target heading: %.1f\t", targetHeading);
         DEBUG.println("AutoPilot On");
       }
     }
@@ -180,9 +167,9 @@ void task()
     }
     else
     {
-      torquePID.P++;
+      anglePID.P++;
       DEBUG.print("New P: ");
-      DEBUG.println(torquePID.P);
+      DEBUG.println(anglePID.P);
     }
   }
   else if (buttonPressed.m1 && !lastButtonPressed.m1)
@@ -212,26 +199,31 @@ void task()
     }
     else
     {
-      torquePID.P--;
+      anglePID.P--;
       DEBUG.print("New P: ");
-      DEBUG.println(torquePID.P);
+      DEBUG.println(anglePID.P);
     }
   }
 
   if (AutopilotMode == AUTOPILOT_ON)
   {
     float tillerHeading = average(compass.getHeading());
-    // float tillerAngleToHull = motor.getAngle();
-
-    float Error = getCompassError(targetHeading, tillerHeading);
-    float motorAngle = anglePID(Error);
-    // motor.setAngle(motorAngle);
-    // motor.setMotor(50);
+    float tillerAngleToHull = motor.getTillerAngleToHull();
+    float hullHeading = tillerHeading + tillerAngleToHull;
+    float Error = getCompassError(targetHeading, hullHeading);
+    float targetAngle = anglePID(Error);
+    motor.setTargetTillerAngle(targetAngle);
+    motor.task();
+    if (everyXms(&printTimer, 500))
+  {
+    Serial.printf("Tiller Heading %.1f TillerAngleToHull %.1f  Hull Heading %.1f  Error %.1f  TargetTillerAngle %.1f  MotorTorque %.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
+  }
   }
   else
   {
-    // motor.setMotor(0);
+    motor.setMotor(0);
   }
+  
 }
 
 void updateButtons()

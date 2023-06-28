@@ -1,6 +1,6 @@
 #include "motorDriver.h"
 
-void motorDriver::begin()
+void motorManager::begin()
 {
   shaftAngle = 0;
   Direction = RIGHT;
@@ -11,11 +11,11 @@ void motorDriver::begin()
   ledcAttachPin(MOTOR_VREF, LEDC_CHANNEL);
 }
 
-motorDriver::motorDriver()
+motorManager::motorManager()
 {
 }
 
-void motorDriver::setMotor(int vref)
+void motorManager::setMotor(int vref)
 {
 
   if (vref < 0)
@@ -39,34 +39,38 @@ void motorDriver::setMotor(int vref)
   ledcWrite(LEDC_CHANNEL, abs(vref));
 }
 
-void motorDriver::handleInturrupt()
+void motorManager::handleInturrupt()
 {
   if (Direction == RIGHT)
   {
-    ticks++;
+    ticks--;
   }
   else
   {
-    ticks--;
+    ticks++;
   }
 }
 
-double motorDriver::getShaftAngle(){
+double motorManager::getShaftAngle(){
   return (double)(ticks)*TICKS_TO_DEGREES;
 }
 
-void motorDriver::setAngle(float angle)
-{
-  targetAngle = angle;
+float motorManager::getPosition(){
+  return 2*M_PI*RADIUS_CM*(getShaftAngle()/360);
 }
 
-void motorDriver::task()
-{
-  // Serial.println(targetAngle);
+float motorManager::getTillerAngleToHull(){
+  return (getPosition()*180)/(M_PI*TILLER_LENGTH_CM);
 }
 
-float motorDriver::getAngle()
-{
-
-  return 0;
+void motorManager::setTargetTillerAngle(float target){
+  targetAngle = target;   
 }
+
+void motorManager::task()
+{
+  motorTorque = torquePID(targetAngle - getTillerAngleToHull());
+  
+  setMotor(motorTorque);
+}
+
