@@ -20,9 +20,17 @@ bool BQ25792::flashChargeLevel(uint16_t pinToFlash, int totalDuration, uint16_t 
     float vBat = getVBAT();
     float min = getVSYSMIN();
     float max = getChargeVoltageLimit();
+    
+    float onTime = -1000;
+    float offTime = 2000; totalDuration-onTime;
+    while(onTime<0 || onTime > 1000){
+        vBat = getVBAT();
+        onTime = map(vBat*100, min*100, max*100, 0, totalDuration);
+        Serial.println("Trying");
+        delay(1000);
+    }
+        offTime = totalDuration-onTime;
     Serial.printf("Vbat: %.1f   Min: %.1f   Max: %.1f\n", vBat, min, max);
-    float onTime = map(vBat*100, min*100, max*100, 0, totalDuration);
-    float offTime = totalDuration-onTime;
     Serial.printf("ON: %.1f  OFF:%.1f\n", onTime, offTime);
     for(int i = 0; i<cycles; i++){
         digitalWrite(pinToFlash, HIGH);
