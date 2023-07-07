@@ -1,5 +1,4 @@
 
-#define DEBUG Serial
 
 // PIN definitions
 #define IMU_ADDR_BIT7_PIN 22

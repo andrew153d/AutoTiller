@@ -14,7 +14,7 @@
 class motorManager
 {
 public:
-    PIDController torquePID = PIDController(5, 0, 0, 10000, 255);
+    PIDController torquePID = PIDController(60, 0, 1, 10000, 255);
     float shaftAngle, position, targetAngle;
     int dir1, dir2, vref, encA, encB;
     long ticks;

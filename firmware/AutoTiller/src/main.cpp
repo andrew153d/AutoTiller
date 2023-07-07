@@ -9,13 +9,13 @@
 #include "motorDriver.h"
 
 // running average filter
-#define AVG_LENGTH 20
+#define AVG_LENGTH 50
 float average_buf[AVG_LENGTH];
 int8_t avg_index = 0;
 float average(float input);
 
-float deadspace = 10;
-PIDController anglePID(1, 0, 0, 100, 20);
+float deadspace = 0;
+PIDController anglePID(0.8, 0, 0, 2, 20);
 
 long printTimer = 0;
 typedef struct
@@ -60,7 +60,8 @@ void IRAM_ATTR ISR()
 
 void setup()
 {
-  DEBUG.begin(115200);
+
+  DEBUG_BEGIN(115200);
 
   Wire.begin(SDA_PIN, SCL_PIN);
 
@@ -85,11 +86,11 @@ void setup()
 
   if (compass.begin())
   {
-    Serial.println("Compass Found");
+    DEBUG_PRINTLN("Compass Found");
   }
   else
   {
-    Serial.println("Failed to find sensor");
+    DEBUG_PRINTLN("Failed to find sensor");
     while (1)
     {
     };
@@ -98,7 +99,6 @@ void setup()
   attachInterrupt(ENC_A, ISR, FALLING);
 
   motor.begin();
-
 }
 
 void loop()
@@ -107,8 +107,6 @@ void loop()
 
   updateButtons(); // update the state of the buttons
   task();
-
-  
 }
 
 void task()
@@ -121,25 +119,23 @@ void task()
       if (AutopilotMode == AUTOPILOT_ON)
       {
         AutopilotMode = AUTOPILOT_OFF;
-        DEBUG.println("AutoPilot Off");
+        DEBUG_PRINTLN("AutoPilot Off");
       }
       else if (AutopilotMode == AUTOPILOT_OFF)
       {
         AutopilotMode = AUTOPILOT_ON;
-        for (int i = 0; i < AVG_LENGTH; i++)
-        {
-          targetHeading = average(compass.getHeading());
-        }
-        targetHeading = average(compass.getHeading());
-        Serial.printf("Target heading: %.1f\t", targetHeading);
-        DEBUG.println("AutoPilot On");
+        targetHeading = compass.getHeading();
+        DEBUG_PRINTF("Target heading: %.1f\t", targetHeading);
+        DEBUG_PRINTLN("AutoPilot On");
       }
     }
     else
     {
-      DEBUG.println("Start Calibrating");
+      DEBUG_PRINTLN("Start Calibrating");
+      DEBUG_PRINTF("Old Values %.1d%5.1d\n", compass.readXOffset(), compass.readYOffset());
       compass.calibrate();
-      DEBUG.println("Done Calibrating");
+      DEBUG_PRINTF("New Values %.1d%5.1d\n", compass.readXOffset(), compass.readYOffset());
+      DEBUG_PRINTLN("Done Calibrating");
     }
   }
   else if (buttonPressed.p1 && !lastButtonPressed.p1)
@@ -147,14 +143,14 @@ void task()
     if (!buttonPressed.Function)
     {
       targetHeading++;
-      DEBUG.print("New Heading: ");
-      DEBUG.println(targetHeading);
+      DEBUG_PRINT("New Heading: ");
+      DEBUG_PRINTLN(targetHeading);
     }
     else
     {
-      deadspace++;
-      DEBUG.print("New deadspace: ");
-      DEBUG.println(deadspace);
+      anglePID.output_ramp++;
+      DEBUG_PRINT("New ramp: ");
+      DEBUG_PRINTLN(anglePID.output_ramp);
     }
   }
   else if (buttonPressed.p15 && !lastButtonPressed.p15)
@@ -162,14 +158,14 @@ void task()
     if (!buttonPressed.Function)
     {
       targetHeading += 15;
-      DEBUG.print("New Heading: ");
-      DEBUG.println(targetHeading);
+      DEBUG_PRINT("New Heading: ");
+      DEBUG_PRINTLN(targetHeading);
     }
     else
     {
-      anglePID.P++;
-      DEBUG.print("New P: ");
-      DEBUG.println(anglePID.P);
+      anglePID.P += .1;
+      DEBUG_PRINT("New P: ");
+      DEBUG_PRINTLN(anglePID.P);
     }
   }
   else if (buttonPressed.m1 && !lastButtonPressed.m1)
@@ -177,16 +173,16 @@ void task()
     if (!buttonPressed.Function)
     {
       targetHeading--;
-      DEBUG.print("New Heading: ");
-      DEBUG.println(targetHeading);
+      DEBUG_PRINT("New Heading: ");
+      DEBUG_PRINTLN(targetHeading);
     }
     else
     {
-      deadspace--;
+      anglePID.output_ramp--;
       if (deadspace < 0)
         deadspace = 0;
-      DEBUG.print("New deadspace: ");
-      DEBUG.println(deadspace);
+      DEBUG_PRINT("New ramp: ");
+      DEBUG_PRINTLN(anglePID.output_ramp);
     }
   }
   else if (buttonPressed.m15 && !lastButtonPressed.m15)
@@ -194,14 +190,14 @@ void task()
     if (!buttonPressed.Function)
     {
       targetHeading -= 15;
-      DEBUG.print("New Heading: ");
-      DEBUG.println(targetHeading);
+      DEBUG_PRINT("New Heading: ");
+      DEBUG_PRINTLN(targetHeading);
     }
     else
     {
-      anglePID.P--;
-      DEBUG.print("New P: ");
-      DEBUG.println(anglePID.P);
+      anglePID.P -= .1;
+      DEBUG_PRINT("New P: ");
+      DEBUG_PRINTLN(anglePID.P);
     }
   }
 
@@ -214,16 +210,20 @@ void task()
     float targetAngle = anglePID(Error);
     motor.setTargetTillerAngle(targetAngle);
     motor.task();
-    if (everyXms(&printTimer, 500))
-  {
-    Serial.printf("Tiller Heading %.1f TillerAngleToHull %.1f  Hull Heading %.1f  Error %.1f  TargetTillerAngle %.1f  MotorTorque %.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
-  }
+    // if (everyXms(&printTimer, 500))
+    ///{
+    // DEBUG_PRINTF("Tiller Heading %.1f TillerAngleToHull %.1f  Hull Heading %.1f  Error %.1f  TargetTillerAngle %.1f  MotorTorque %.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
+    DEBUG_PRINTF("%8.1f%8.1f%8.1f%8.1f%8.1f%8.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
+    //}
   }
   else
   {
     motor.setMotor(0);
+    if (buttonPressed.Function)
+    {
+      DEBUG_PRINTLN(average(compass.getHeading()));
+    }
   }
-  
 }
 
 void updateButtons()
@@ -273,6 +273,6 @@ float average(float input)
     sum += val;
   }
 
-  // Serial.printf("Min: %f  Max: %f\n", min, max);
+  // DEBUG_PRINTF("Min: %f  Max: %f\n", min, max);
   return sum / AVG_LENGTH;
 }

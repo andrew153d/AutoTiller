@@ -2,7 +2,8 @@
 #define UTILS_H
 #include <Arduino.h>
 
-//#define DEBUG
+
+#define DEBUG
 
 #define DEBUG_PRINTER Serial
 
@@ -18,6 +19,10 @@
     {                                                               \
         DEBUG_PRINTER.printf(__VA_ARGS__);                          \
     }
+#define DEBUG_BEGIN(...)                                           \
+    {                                                               \
+        DEBUG_PRINTER.begin(__VA_ARGS__);                          \
+    }
 #else
 #define DEBUG_PRINT(...) \
     {                    \
@@ -26,6 +31,9 @@
     {                      \
     }
 #define DEBUG_PRINTF(...) \
+    {                     \
+    }
+#define DEBUG_BEGIN(...) \
     {                     \
     }
 #endif

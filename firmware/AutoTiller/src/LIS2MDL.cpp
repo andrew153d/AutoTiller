@@ -1,11 +1,46 @@
 #include "LIS2MDL.h"
 
-bool everyXms(long& timer, long duration) {
-    if(millis() - timer > duration){
+#ifdef DEBUG
+#define DEBUG_PRINTER Serial
+#define DEBUG_PRINT(...)                  \
+    {                                     \
+        DEBUG_PRINTER.print(__VA_ARGS__); \
+    }
+#define DEBUG_PRINTLN(...)                  \
+    {                                       \
+        DEBUG_PRINTER.println(__VA_ARGS__); \
+    }
+#define DEBUG_PRINTF(...)                  \
+    {                                      \
+        DEBUG_PRINTER.printf(__VA_ARGS__); \
+    }
+#define DEBUG_BEGIN(...)                  \
+    {                                     \
+        DEBUG_PRINTER.begin(__VA_ARGS__); \
+    }
+#else
+#define DEBUG_PRINT(...) \
+    {                    \
+    }
+#define DEBUG_PRINTLN(...) \
+    {                      \
+    }
+#define DEBUG_PRINTF(...) \
+    {                     \
+    }
+#define DEBUG_BEGIN(...) \
+    {                    \
+    }
+#endif
+
+bool everyXms(long &timer, long duration)
+{
+    if (millis() - timer > duration)
+    {
         timer = millis();
         return true;
     }
-  return false;
+    return false;
 }
 
 LIS2MDL::LIS2MDL()
@@ -21,21 +56,27 @@ bool LIS2MDL::begin()
     }
 
     Config_A_Type AConfig;
-    uint8_t AConfigraw = 0x80;
+    uint8_t AConfigraw = DEFAULT_CONFIG_A;
     memcpy(&AConfig, &AConfigraw, 1);
     writeConfigA(AConfig);
 
     Config_B_Type BConfig;
-    uint8_t BConfigraw = 0x80;
+    uint8_t BConfigraw = DEFAULT_CONFIG_B;
     memcpy(&BConfig, &BConfigraw, 1);
     setConfigB(BConfig);
+
+    Config_C_Type Config;
+    uint8_t CConfigraw = DEFAULT_CONFIG_C;
+    memcpy(&Config, &CConfigraw, 1);
+    setConfigC(Config);
 
     enableOffsetCancelation();
 
     return true;
 }
 
- void LIS2MDL::readRaw(int16_t& X, int16_t&Y, int16_t&Z){
+void LIS2MDL::readRaw(int16_t &X, int16_t &Y, int16_t &Z)
+{
     Status_type status;
     status = readStatus();
     if (status.XYZ_available)
@@ -43,9 +84,8 @@ bool LIS2MDL::begin()
         X = readXRaw();
         Y = readYRaw();
         Z = readZRaw();
-        
     }
- }
+}
 
 void LIS2MDL::readMag(float &X, float &Y, float &Z)
 {
@@ -56,7 +96,6 @@ void LIS2MDL::readMag(float &X, float &Y, float &Z)
         X = (float)readXRaw() * LSB_TO_MSG;
         Y = (float)readYRaw() * LSB_TO_MSG;
         Z = (float)readZRaw() * LSB_TO_MSG;
-        
     }
 }
 
@@ -73,8 +112,9 @@ void LIS2MDL::calibrate()
     writeYOffset(0);
     long printTimer = 0;
 
-    //throw away some readings, the first ones seems to be erroneous
-    for(int i = 0; i<10; i++){
+    // throw away some readings, the first ones seems to be erroneous
+    for (int i = 0; i < 10; i++)
+    {
         readRaw(X, Y, Z);
         delay(100);
     }
@@ -90,7 +130,8 @@ void LIS2MDL::calibrate()
         if (Y > maxY)
             maxY = Y;
         delay(10);
-        if(everyXms(printTimer, 1000)){
+        if (everyXms(printTimer, 1000))
+        {
             printTimer = millis();
             Serial.print("X: ");
             Serial.print(X);
@@ -119,7 +160,7 @@ float LIS2MDL::getHeading()
 {
 
     readMag(X, Y, Z);
-    
+
     float Pi = 3.14159;
 
     // Calculate the angle of the vector y,x
@@ -297,7 +338,9 @@ Config_C_Type LIS2MDL::readConfigC()
 
 void LIS2MDL::setConfigC(Config_C_Type config)
 {
+    #ifndef ALLOW_DISABLE_I2C
     config.I2C_DIS = 0; // make sure I2C isnt disabled
+    #endif
     writeByte(CFG_REG_C_ADDR, ((uint8_t *)&config));
 }
 
@@ -307,13 +350,15 @@ void LIS2MDL::enableInturruptOnPin(bool enable)
     config.INT_on_PIN = enable;
     setConfigC(config);
 }
-void LIS2MDL::enableI2CInterface(bool enable)
+void LIS2MDL::disableI2CInterface(bool enable)
 {
     // commented out just in case I try to call it
     // this would be big bad
-    // Config_C_Type config = readConfigC();
-    // config.I2C_DIS = enable;
-    // setConfigC(config);
+    #ifndef ALLOW_DISABLE_I2C
+    Config_C_Type config = readConfigC();
+    config.I2C_DIS = enable;
+    setConfigC(config);
+    #endif
 }
 
 void LIS2MDL::enableAvoidReadError(bool enable)

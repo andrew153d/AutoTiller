@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+
+
 #define OFFSET_X_REG_L_ADDR 0x45
 #define OFFSET_X_REG_H_ADDR 0x46
 #define OFFSET_Y_REG_L_ADDR 0x47
@@ -36,6 +38,16 @@
 #define SENSITIVITY_MGAUSS_PER_LSB 1.5
 #define COMPASS_DEVICEADDRESS 0x1E
 
+#define DEBUG
+
+//COMP_TEMP_EN | REBOOT | SOFT_RST | LP | ODR[1:0] | MD[1:0]
+#define DEFAULT_CONFIG_A 0b10001100
+
+// 0 | 0 | 0 | OFF_CANC_ONE_SHOT | INT_on_DATAOFF | Set_Freq | OFF_CANC | LPF
+#define DEFAULT_CONFIG_B 0b00000001
+
+// 0 | INT_ON_PIN | I2C_DIS | BDU | BLE | 4WSPI | Self_Test | DRDY_on_PIN
+#define DEFAULT_CONFIG_C 0b00000001
 
 #define LSB_TO_MSG 1.5
 //#define LIS2MDL_DEBUG
@@ -234,7 +246,7 @@ public:
     Config_C_Type readConfigC();
     void setConfigC(Config_C_Type);
     void enableInturruptOnPin(bool enable = true);
-    void enableI2CInterface(bool enable = true);
+    void disableI2CInterface(bool enable = true);
     void enableAvoidReadError(bool enable = true);
     void invertData(bool enable = true);
     void enableSPI(bool enable = true);
