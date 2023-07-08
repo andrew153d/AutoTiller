@@ -2,7 +2,7 @@
 #include "defines.h"
 #include "Wire.h"
 #include "BQ25792.h"
-#include "LIS2MDL.h"
+#include "LIS2MDL_Driver.h"
 #include "pid.h"
 #include "filter.h"
 #include "utils.h"
@@ -97,7 +97,10 @@ void setup()
   }
 
   attachInterrupt(ENC_A, ISR, FALLING);
-
+  int16_t Xofst = -69;
+  int16_t Yofst = -438;
+  compass.writeXOffset(Xofst);
+  compass.writeYOffset(Yofst);
   motor.begin();
 }
 
