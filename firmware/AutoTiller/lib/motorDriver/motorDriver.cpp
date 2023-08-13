@@ -56,7 +56,7 @@ double motorManager::getShaftAngle(){
 }
 
 float motorManager::getPosition(){
-  return 2*M_PI*RADIUS_CM*(getShaftAngle()/360);
+  return M_PI*RADIUS_CM*(getShaftAngle()/360);
 }
 
 float motorManager::getTillerAngleToHull(){
@@ -69,8 +69,9 @@ void motorManager::setTargetTillerAngle(float target){
 
 void motorManager::task()
 {
-  motorTorque = torquePID(targetAngle - getTillerAngleToHull());
-  
+  float error = targetAngle - getPosition();
+  motorTorque = torquePID(error);
+  //Serial.printf("%8.1f%8.1f%8.1f%8.1f\n", targetAngle, getPosition(), error, motorTorque);
   setMotor(motorTorque);
 }
 

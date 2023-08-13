@@ -15,7 +15,7 @@ int8_t avg_index = 0;
 float average(float input);
 
 float deadspace = 0;
-PIDController anglePID(0.8, 0, 0, 2, 20);
+PIDController anglePID(2, 0, 0, 2, 20);
 
 long printTimer = 0;
 typedef struct
@@ -101,15 +101,25 @@ void setup()
   int16_t Yofst = -438;
   compass.writeXOffset(Xofst);
   compass.writeYOffset(Yofst);
+  compass.enableAvgFilter();
+  compass.filter_alpha = 0.02;
   motor.begin();
 }
 
 void loop()
 {
   nowTime = millis();
-
+  /*int ticker = int(millis()/5000);
+  if(ticker%2){
+    motor.setTargetTillerAngle(0);
+  }else{
+    motor.setTargetTillerAngle(-5);
+  }*/
+  //motor.task();
+  
   updateButtons(); // update the state of the buttons
   task();
+
 }
 
 void task()
@@ -144,8 +154,8 @@ void task()
   else if (buttonPressed.p1 && !lastButtonPressed.p1)
   {
     if (!buttonPressed.Function)
-    {
-      targetHeading++;
+    {  
+      targetHeading--;
       DEBUG_PRINT("New Heading: ");
       DEBUG_PRINTLN(targetHeading);
     }
@@ -160,7 +170,7 @@ void task()
   {
     if (!buttonPressed.Function)
     {
-      targetHeading += 15;
+      targetHeading -= 15;
       DEBUG_PRINT("New Heading: ");
       DEBUG_PRINTLN(targetHeading);
     }
@@ -175,7 +185,7 @@ void task()
   {
     if (!buttonPressed.Function)
     {
-      targetHeading--;
+      targetHeading++;
       DEBUG_PRINT("New Heading: ");
       DEBUG_PRINTLN(targetHeading);
     }
@@ -192,7 +202,7 @@ void task()
   {
     if (!buttonPressed.Function)
     {
-      targetHeading -= 15;
+      targetHeading += 15;
       DEBUG_PRINT("New Heading: ");
       DEBUG_PRINTLN(targetHeading);
     }
@@ -206,22 +216,21 @@ void task()
 
   if (AutopilotMode == AUTOPILOT_ON)
   {
-    float tillerHeading = average(compass.getHeading());
-    float tillerAngleToHull = motor.getTillerAngleToHull();
-    float hullHeading = tillerHeading + tillerAngleToHull;
-    float Error = getCompassError(targetHeading, hullHeading);
-    float targetAngle = anglePID(Error);
-    motor.setTargetTillerAngle(targetAngle);
+    float currentHeading = average(compass.getHeading());
+    float Error = getCompassError(targetHeading, currentHeading);
+    float target = anglePID(Error);
+    motor.setTargetTillerAngle(-1*target);
     motor.task();
     // if (everyXms(&printTimer, 500))
     ///{
     // DEBUG_PRINTF("Tiller Heading %.1f TillerAngleToHull %.1f  Hull Heading %.1f  Error %.1f  TargetTillerAngle %.1f  MotorTorque %.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
-    DEBUG_PRINTF("%8.1f%8.1f%8.1f%8.1f%8.1f%8.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
+    DEBUG_PRINTF("%8.1f%8.1f%8.1f%8.1f\n", targetHeading, currentHeading, Error, target);
     //}
   }
   else
   {
     motor.setMotor(0);
+    //motor.task();
     if (buttonPressed.Function)
     {
       DEBUG_PRINTLN(average(compass.getHeading()));
