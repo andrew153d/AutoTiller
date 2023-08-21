@@ -250,7 +250,7 @@ void updateButtons()
   digitalWrite(STAT_LED, (buttonPressed.Function || buttonPressed.m15 || buttonPressed.Set || buttonPressed.p15 || buttonPressed.m1 || buttonPressed.p1));
 }
 
-float getCompassError(float targetHeading, float currentHeading)
+float getCompassError(float targetHeadingr, float currentHeading)
 {
   float error = targetHeading - currentHeading;
 
