@@ -15,7 +15,7 @@ int8_t avg_index = 0;
 float average(float input);
 
 float deadspace = 0;
-PIDController anglePID(2, 0, 0, 2, 20);
+PIDController anglePID(2, 0, 0, 2, 10);
 
 long printTimer = 0;
 typedef struct
@@ -109,17 +109,9 @@ void setup()
 void loop()
 {
   nowTime = millis();
-  /*int ticker = int(millis()/5000);
-  if(ticker%2){
-    motor.setTargetTillerAngle(0);
-  }else{
-    motor.setTargetTillerAngle(-5);
-  }*/
-  //motor.task();
-  
+
   updateButtons(); // update the state of the buttons
   task();
-
 }
 
 void task()
@@ -154,7 +146,7 @@ void task()
   else if (buttonPressed.p1 && !lastButtonPressed.p1)
   {
     if (!buttonPressed.Function)
-    {  
+    {
       targetHeading--;
       DEBUG_PRINT("New Heading: ");
       DEBUG_PRINTLN(targetHeading);
@@ -216,21 +208,22 @@ void task()
 
   if (AutopilotMode == AUTOPILOT_ON)
   {
-    float currentHeading = average(compass.getHeading());
-    float Error = getCompassError(targetHeading, currentHeading);
-    float target = anglePID(Error);
-    motor.setTargetTillerAngle(-1*target);
+    float tillerHeading = average(compass.getHeading());
+    float tillerAngleToHull = motor.getTillerAngleToHull();
+    float hullHeading = tillerHeading + tillerAngleToHull;
+    float Error = getCompassError(targetHeading, hullHeading);
+    float targetAngle = anglePID(Error);
+    motor.setTargetTillerAngle(targetAngle);
     motor.task();
     // if (everyXms(&printTimer, 500))
-    ///{
+    ///{7622
     // DEBUG_PRINTF("Tiller Heading %.1f TillerAngleToHull %.1f  Hull Heading %.1f  Error %.1f  TargetTillerAngle %.1f  MotorTorque %.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
-    DEBUG_PRINTF("%8.1f%8.1f%8.1f%8.1f\n", targetHeading, currentHeading, Error, target);
+    DEBUG_PRINTF("%8.1f%8.1f%8.1f%8.1f%8.1f%8.1f\n", tillerHeading, tillerAngleToHull, hullHeading, Error, targetAngle, motor.motorTorque);
     //}
   }
   else
   {
     motor.setMotor(0);
-    //motor.task();
     if (buttonPressed.Function)
     {
       DEBUG_PRINTLN(average(compass.getHeading()));
@@ -250,7 +243,7 @@ void updateButtons()
   digitalWrite(STAT_LED, (buttonPressed.Function || buttonPressed.m15 || buttonPressed.Set || buttonPressed.p15 || buttonPressed.m1 || buttonPressed.p1));
 }
 
-float getCompassError(float targetHeadingr, float currentHeading)
+float getCompassError(float targetHeading, float currentHeading)
 {
   float error = targetHeading - currentHeading;
 
